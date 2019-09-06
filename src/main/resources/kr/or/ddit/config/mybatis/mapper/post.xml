@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="post">
+
+  <!--  게시글 페이징 조회 -->
+  <select id="getPostList" parameterType="map" resultType="post">
+		select a.*
+		from
+		(select rownum rn, a.*
+		 from
+		    (select POSTNO, PARENTPOSTNO, lpad(' ', (level-1)*4, ' ') || POSTTITLE POSTTITLE, USERID, POSTWDATE, level, DELETEYN
+		      from Test_POST a
+		      where BOARDNO = #{boardNo}
+		     start with PARENTPOSTNO is null
+		     connect by prior POSTNO = PARENTPOSTNO
+		     order SIBLINGS by POSTGN desc, POSTNO) a) a
+		where rn between (#{page}-1)*#{pagesize}+1 and #{page}*#{pagesize}
+  </select>
+
+  <!-- 게시글 상세 정보 조회 -->
+  <select id="getPost" parameterType="Integer" resultType="post">
+  	select * from Test_post where postno = #{postno}
+  </select>
+
+  <!--  답글 게시글 등록 -->
+  <insert id="insertPost" parameterType="post">
+  	INSERT INTO Test_POST
+  		VALUES(Test_post_SEQ.NEXTVAL, #{boardno}, #{posttitle}, #{postcontent}, #{userid}, sysdate, 0, case 
+  		when NVL(#{postgn},0) = 0
+  		then Test_post_SEQ.currval else #{postgn} end, case when NVL(#{parentpostno},0) = 0 
+  		then NULL else #{parentpostno} end)
+  </insert>
+
+  <!--  게시글의 게시글 번호 조회 -->
+  <select id="getPostNo" resultType="Integer">
+  	select max(postNo) from Test_POST
+  </select>
+
+  <!-- 게시글 삭제 -->
+  <update id="deletePost" parameterType="Integer">
+  	update Test_POST set DELETEYN = 1 where postno = #{postno}
+  </update>
+
+  <!-- 게시글 수정 -->
+  <update id="updatePost" parameterType="post">
+  	update Test_POST set posttitle = #{posttitle}, postcontent = #{postcontent} where postno = #{postno}
+  </update>
+
+  <!-- 전체 게시글 건수 조회 -->
+  <select id="getPostTotalCnt" parameterType="Integer" resultType="Integer">
+  	select count(*) from Test_POST where BOARDNO = #{boardNo}
+  </select>
+
+  <!-- 게시글 첨부파일 등록 -->
+  <insert id="insertPostFile" parameterType="postFile">
+  	INSERT INTO Test_POSTFILE
+  		VALUES(Test_postFile_SEQ.NEXTVAL, #{filename}, #{realfilename}, 
+  			   case when NVL(#{postno},0) = 0 then Test_post_SEQ.CURRVAL else #{postno} end)
+  </insert>
+
+  <!-- 게시글 번호에 맞는 파일 조회 -->
+  <select id="getPostFileList" parameterType="Integer" resultType="postFile">
+  	select * from Test_POSTFILE where postno = #{postno}
+  </select>
+
+  <!-- 파일 삭제 -->
+  <delete id="deleteFile" parameterType="Integer">
+  	delete from Test_POSTFILE where fileno = #{fileno}
+  </delete>
+
+  <!-- 선택한 파일 정보 조회 -->
+  <select id="getPostFile" parameterType="Integer" resultType="postFile">
+  	select * from Test_POSTFILE where fileno = #{fileno}
+  </select>
+
+</mapper>
